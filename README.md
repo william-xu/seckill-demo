@@ -10,7 +10,7 @@
 
 # 开发日志
 
-####【2020-02-17】
+#### 【2020-02-17】
 
 * 完成初步修改
 
@@ -18,7 +18,7 @@
 
 * 可能出现的错误：
 
-#####【错误一】
+##### 【错误一】
 
 ```
 02/17-23:35:08 [http-nio-27000-exec-75] ERROR org.xwl.demo.seckill.service.impl.SeckillServiceImpl- null
@@ -34,7 +34,7 @@ org.xwl.demo.seckill.exception.SeckillException: null
 对应代码位置： throw new SeckillException(SeckillStateEnum.REPEAT_KILL);	
 应该跟动态代理有关系，暂未确定具体原因
 
-#####【错误二】
+##### 【错误二】
 
 ```
 02/17-23:36:17 [http-nio-27000-exec-27] ERROR org.xwl.demo.seckill.controller.SeckillController- Cannot be started more than once
@@ -46,7 +46,7 @@ java.lang.IllegalStateException: Cannot be started more than once
 CuratorFrameworkImpl重复启动的问题，未找到具体原因，目前看不影响应用正常运行。
 
 
-#####【可考虑的其他尝试】
+##### 【可考虑的其他尝试】
 
 1. 前后分离、动静分离
 2. 增加用户登录模块
