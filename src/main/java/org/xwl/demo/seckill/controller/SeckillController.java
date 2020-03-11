@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.xwl.demo.seckill.constant.SeckillStateEnum;
 import org.xwl.demo.seckill.dto.Exposer;
@@ -87,7 +88,7 @@ public class SeckillController {
     @ResponseBody
     public SeckillResult<SeckillExecution> execute(@PathVariable("seckillId") Long seckillId,
                                                    @PathVariable("md5") String md5,                 
-                                                   @CookieValue(value = "killPhone", required = false) Long phone) {
+                                                   @RequestParam(required = false) @CookieValue(value = "killPhone", required = false) Long phone) {
     	
         //springmvc valid
         if (phone == null) {
