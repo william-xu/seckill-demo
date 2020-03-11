@@ -18,7 +18,6 @@ var seckill ={
         node.hide()
             .html('<button class="btn btn-primary btn-lg" id="killBtn">开始秒杀</button>');//按钮
         $.post(seckill.URL.exposer(seckillId),
-            {},
             function(result){
             //在回调函数中，执行交互流程
             if(result && result['success']){
@@ -30,7 +29,7 @@ var seckill ={
                     var killUrl = seckill.URL.execution(seckillId,md5);
                     console.log("killUrl:"+killUrl);
                     //绑定一次点击事件
-                    $('#killBtn').one('click',function(){
+                    node.one('click',function(){
                         //执行秒杀请求
                         //1:先禁用按钮
                         $(this).addClass('disabled');
@@ -73,10 +72,11 @@ var seckill ={
         var seckillBox = $('#seckill-box');
         var startCounterSpan = $('#start_counter_span');
         var endCounterSpan = $('#end_counter_span');
+        endCounterSpan.html("");
         //时间判断
         if(nowTime > endTime){
             //秒杀结束
-        	endCounterSpan.html('秒杀结束!');
+        	endCounterSpan.html('秒杀已经结束!');
         }else if(nowTime < startTime){
             //秒杀未开始,计时事件绑定
             var killTime = new Date(startTime);
@@ -94,6 +94,7 @@ var seckill ={
     },
     startSeckill: function(seckillId, seckillBox, endTime,startCounterSpan){
     	var endCounterSpan = $('#end_counter_span');
+        endCounterSpan.html("");
     	startCounterSpan.hide();
     	seckill.handleSeckillkill(seckillId,seckillBox);
     	var end = new Date(endTime);

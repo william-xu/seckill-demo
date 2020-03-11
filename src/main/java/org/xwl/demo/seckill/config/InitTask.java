@@ -38,7 +38,7 @@ public class InitTask implements CommandLineRunner {
      */
     private void initRedis() {
         //清空Redis缓存
-//    	redisConnFactory.getConnection().flushDb();
+    	redisConnFactory.getConnection().flushDb();
         List<Seckill> seckillList = seckillDAO.queryAll(0, 10);
         for (Seckill seckill : seckillList) {
             String nameKey = RedisKeyPrefix.SECKILL_NAME + seckill.getSeckillId();

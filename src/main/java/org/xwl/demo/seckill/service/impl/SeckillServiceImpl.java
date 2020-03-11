@@ -6,11 +6,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
-import org.apache.curator.framework.recipes.locks.InterProcessLock;
-import org.apache.curator.framework.recipes.locks.InterProcessMutex;
-import org.apache.curator.utils.CloseableUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +15,9 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
-import org.xwl.demo.seckill.config.ZookeeperCuratorClientManager;
 import org.xwl.demo.seckill.config.RabbitMQProducer;
 import org.xwl.demo.seckill.config.ZookeeperConfig;
+import org.xwl.demo.seckill.config.ZookeeperCuratorClientManager;
 import org.xwl.demo.seckill.constant.RedisKeyPrefix;
 import org.xwl.demo.seckill.constant.SeckillStateEnum;
 import org.xwl.demo.seckill.dao.SeckillDAO;
@@ -68,6 +65,9 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private ZookeeperConfig zkConfig;
+
+    @Autowired
+    private RedissonClient redissonClient;
     
     private Object sharedObj = new Object();
 
@@ -157,16 +157,28 @@ public class SeckillServiceImpl implements SeckillService {
             throw new SeckillException(SeckillStateEnum.REPEAT_KILL);
         } else {
         	//通过Curator创建Zookeeper分布式锁
-            CuratorFramework client = curatorClientManager.getClient();
-            if (client.getState().compareTo(CuratorFrameworkState.STARTED)!=0) {
-            	client.start();
-            }
-            InterProcessLock lock = new InterProcessMutex(client, zkConfig.getLockRoot());
+//            CuratorFramework client = curatorClientManager.getClient();
+//            if (client.getState().compareTo(CuratorFrameworkState.STARTED)!=0) {
+//            	client.start();
+//            }
+//            InterProcessLock lock = new InterProcessMutex(client, zkConfig.getLockRoot());
+
+            RLock rLock = redissonClient.getLock("DIST_REDISSON_LOCK");
 
             boolean lockSuccess = false;
             try {
             	//获取分布式锁
-                lockSuccess = lock.acquire(zkConfig.getLockAcquireTimeout(), TimeUnit.MILLISECONDS);
+//                lockSuccess = lock.acquire(zkConfig.getLockAcquireTimeout(), TimeUnit.MILLISECONDS);
+                try {
+                	lockSuccess = rLock.tryLock(zkConfig.getLockAcquireTimeout(), zkConfig.getSessionTimeout(), TimeUnit.MILLISECONDS);	
+                } catch (Exception e) {
+                	//获取分布式锁失败
+                    logger.error(e.getMessage(), e);
+                    logger.info("SECKILL_DISTLOCK_ACQUIRE_EXCEPTION---seckillId={},userPhone={}", seckillId, userPhone);
+
+                    throw new SeckillException(SeckillStateEnum.DISTLOCK_ACQUIRE_FAILED);
+                }
+
                 long threadId = Thread.currentThread().getId();
                 logger.info("threadId={}, lock_success={}",
                         new Object[]{threadId, lockSuccess});
@@ -196,33 +208,27 @@ public class SeckillServiceImpl implements SeckillService {
                 successKilled.setSeckillId(seckillId);
                 successKilled.setState(SeckillStateEnum.SUCCESS.getState());
                 logger.info("SECKILL_SUCCESS>>>seckillId={},userPhone={}", seckillId, userPhone);
-                return new SeckillExecution(seckillId, SeckillStateEnum.SUCCESS, successKilled);
-                
-            } catch (Exception e) {
-            	//获取分布式锁失败
-                logger.error(e.getMessage(), e);
-                logger.info("SECKILL_DISTLOCK_ACQUIRE_EXCEPTION---seckillId={},userPhone={}", seckillId, userPhone);
-
-                throw new SeckillException(SeckillStateEnum.DISTLOCK_ACQUIRE_FAILED);
+                return new SeckillExecution(seckillId, SeckillStateEnum.SUCCESS, successKilled);               
             }finally {
                 long threadId = Thread.currentThread().getId();
             	try {
-                    lock.release();
+//                    lock.release();
+            		if(lockSuccess)
+            		rLock.unlock();
                     logger.info("threadId={}, lock_released={}",
                             new Object[]{threadId, lockSuccess});
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
                 }
-
-                if (client.getState().compareTo(CuratorFrameworkState.STARTED)==0) {
-                    CloseableUtils.closeQuietly(client);
-                }            	
+//                if (client.getState().compareTo(CuratorFrameworkState.STARTED)==0) {
+//                    CloseableUtils.closeQuietly(client);
+//                }
             }
 
         }
     }
 
-    
+
     private void handleInRedis(long userPhone, String inventoryKey
             , String boughtKey) throws SeckillException {
         String inventoryStr = new String(redisConnFactory.getConnection().get(inventoryKey.getBytes()));

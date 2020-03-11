@@ -34,4 +34,9 @@ public class SeckillException extends RuntimeException {
     public void setSeckillStateEnum(SeckillStateEnum seckillStateEnum) {
         this.seckillStateEnum = seckillStateEnum;
     }
+
+	@Override
+	public String getMessage() {
+		return null == super.getMessage() ? seckillStateEnum.getStateInfo() : super.getMessage();
+	}
 }
